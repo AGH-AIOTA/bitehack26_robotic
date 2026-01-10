@@ -34,6 +34,11 @@ void Face::showHappy() {
     _mouth.drawHappy();
 }
 
+void Face::showUwu() {
+    _eyes.drawUwu();
+    _mouth.drawUwu();
+}
+
 void Face::say(int durationMs) {
     unsigned long startTime = millis();
     _eyes.drawNormal(); // Oczy patrzą normalnie podczas mówienia

@@ -10,8 +10,8 @@ bool Eyes::begin() {
 
 void Eyes::drawNormal(int h) {
     _display.clearDisplay();
-    _display.fillRoundRect(30, 32 - (h/2), 25, h, 8, SH110X_WHITE);
-    _display.fillRoundRect(73, 32 - (h/2), 25, h, 8, SH110X_WHITE);
+    _display.fillRoundRect(10, 32 - (h/2), 45, h, 12, SH110X_WHITE);
+    _display.fillRoundRect(73, 32 - (h/2), 45, h, 12, SH110X_WHITE);
     _display.display();
 }
 
@@ -28,17 +28,38 @@ void Eyes::drawShy() {
 
 void Eyes::drawSad() {
     _display.clearDisplay();
-    _display.fillRoundRect(30, 28, 25, 25, 8, SH110X_WHITE);
-    _display.fillRoundRect(73, 28, 25, 25, 8, SH110X_WHITE);
-    _display.fillTriangle(30, 28, 60, 28, 30, 45, SH110X_BLACK); 
-    _display.fillTriangle(73, 28, 103, 28, 103, 45, SH110X_BLACK);
+    _display.fillRoundRect(10, 15, 45, 45, 12, SH110X_WHITE);
+    _display.fillRoundRect(73, 15, 45, 45, 12, SH110X_WHITE);
+    _display.fillTriangle(10, 15, 60, 15, 10, 55, SH110X_BLACK); 
+    _display.fillTriangle(73, 15, 123, 15, 123, 55, SH110X_BLACK);
     _display.display();
 }
 
 void Eyes::drawHappy() {
     _display.clearDisplay();
-    _display.fillCircle(42, 40, 15, SH110X_WHITE);
-    _display.fillCircle(85, 40, 15, SH110X_WHITE);
-    _display.fillRect(0, 40, 128, 25, SH110X_BLACK); 
+    _display.fillCircle(32, 36, 26, SH110X_WHITE);
+    _display.fillCircle(96, 36, 26, SH110X_WHITE);
+    _display.fillRect(0, 36, 128, 28, SH110X_BLACK); 
+    _display.display();
+}
+
+void Eyes::drawUwu() {
+    _display.clearDisplay();
+    // Lewe oko - grubszy łuk (zamknięte szczęśliwe oko)
+    for(int i=0; i<5; i++) {
+        _display.drawCircle(30, 42-i, 22, SH110X_WHITE);
+    }
+    _display.fillRect(0, 0, 60, 25, SH110X_BLACK);
+    
+    // Prawe oko - grubszy łuk (zamknięte szczęśliwe oko)
+    for(int i=0; i<5; i++) {
+        _display.drawCircle(98, 42-i, 22, SH110X_WHITE);
+    }
+    _display.fillRect(68, 0, 60, 25, SH110X_BLACK);
+    
+    // Rumieńce - małe kółka pod oczami
+    _display.fillCircle(15, 40, 4, SH110X_WHITE);
+    _display.fillCircle(113, 40, 4, SH110X_WHITE);
+    
     _display.display();
 }
