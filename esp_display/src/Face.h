@@ -13,6 +13,7 @@ public:
     void showShy();
     void showSad();
     void showHappy();
+    void showUwu();
     void say(int durationMs);
 
 private:

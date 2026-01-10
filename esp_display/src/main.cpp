@@ -32,4 +32,8 @@ void loop() {
   face.say(1500);
   
   delay(3000);
+
+  delay(1000);
+  face.showUwu();
+  delay(1500);
 }

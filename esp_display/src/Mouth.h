@@ -13,6 +13,7 @@ public:
     void drawSad();
     void drawHappy();
     void drawTalk(int frame);
+    void drawUwu();
 
 private:
     Adafruit_SSD1306 _display;

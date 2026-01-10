@@ -12,6 +12,7 @@ public:
     void drawShy();
     void drawSad();
     void drawHappy();
+    void drawUwu();
 
 private:
     Adafruit_SH1106G _display;
