@@ -126,7 +126,7 @@ def classify_emotion_onnx(frame, face_rect):
     return EMOTION_LABELS[emotion_idx], float(scores[emotion_idx])
 
 def draw_frame_with_emotion(frame,face_rect, confidence, emotion):
-    if face_rect is None:
+    if face_rect is None or emotion is None:
         cv2.imshow("Face & Emotion Detection", frame)
         return
 
@@ -157,11 +157,11 @@ if __name__ == "__main__":
                 emotion, emotion_confidence = classify_emotion_onnx(frame, face_rect)
                 draw_frame_with_emotion(frame, face_rect, emotion_confidence, emotion)
                 last_emotion = emotion
+                last_time = current_time
             else:
-                draw_frame_with_emotion(frame, face_rect, 0.0, "no emotion detected")
+                draw_frame_with_emotion(frame, face_rect, 0.0, last_emotion)
         else:
             cv2.imshow("Face & Emotion Detection", frame)
-        last_time = current_time
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
