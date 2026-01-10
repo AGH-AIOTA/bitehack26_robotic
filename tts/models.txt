@@ -1,0 +1,3 @@
+https://huggingface.co/WitoldG/polish_piper_models/blob/main/pl_PL-zenski_wg_glos-medium.onnx
+
+https://huggingface.co/WitoldG/polish_piper_models/blob/main/pl_PL-zenski_wg_glos-medium.onnx.json
