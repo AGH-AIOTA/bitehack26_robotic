@@ -3,11 +3,11 @@ import time
 import cv2
 import onnxruntime as ort
 import torch
-import functools
-
-torch.load = functools.partial(torch.load, weights_only=False)
-
-from hsemotion_onnx.facial_emotions import HSEmotionRecognizer
+# import functools
+#
+# torch.load = functools.partial(torch.load, weights_only=False)
+#
+# from hsemotion_onnx.facial_emotions import HSEmotionRecognizer
 
 camera = cv2.VideoCapture(0)
 caffe_model = 'models/Res10_300x300_ssd_iter_140000.caffemodel'
@@ -19,9 +19,14 @@ THRESHOLD = 0.5
 last_time = 0
 TIME_THRESHOLD = 1.0  # seconds
 emotion_model_path = 'models/enet_b0_8_best_afew.onnx'
-emotion_model = HSEmotionRecognizer(model_name='enet_b0_8_best_afew')
-# emotion_model =  ort.InferenceSession(emotion_model_path)
-
+# emotion_model = HSEmotionRecognizer(model_name='enet_b0_8_best_afew')
+try:
+    emotion_session = ort.InferenceSession(emotion_model_path)
+    print(f"Model załadowany pomyślnie z: {emotion_model_path}")
+except Exception as e:
+    print(f"BŁĄD: Nie znaleziono pliku modelu w {emotion_model_path}. Upewnij się, że tam jest!")
+    exit()
+EMOTION_LABELS = ['Anger', 'Contempt', 'Disgust', 'Fear', 'Happiness', 'Neutral', 'Sadness', 'Surprise']
 
 def detect_face(frame):
     (h, w) = frame.shape[:2]
@@ -72,21 +77,53 @@ def draw_frame(frame, face_rect, confidence):
 
     cv2.imshow("Face Detection", frame)
 
-def classify_emotion(frame, face_rect):
-    if face_rect is None:
-        return None, None
+# def classify_emotion(frame, face_rect):
+#     if face_rect is None:
+#         return None, None
+#
+#     startX, startY, endX, endY = face_rect
+#
+#     face_img = frame[startY:endY, startX:endX]
+#
+#     if face_img.size == 0:
+#         return None, None
+#
+#     face_img_rgb = cv2.cvtColor(face_img, cv2.COLOR_BGR2RGB)
+#
+#     emotion, scores = emotion_model.predict_emotions(face_img_rgb)
+#     # return emotion, scores
+#     return emotion, 0.94
+
+
+def classify_emotion_onnx(frame, face_rect):
+    """Ręczny preprocessing i predykcja ONNX"""
+    if face_rect is None: return None, 0
 
     startX, startY, endX, endY = face_rect
-
     face_img = frame[startY:endY, startX:endX]
+    if face_img.size == 0: return None, 0
 
-    if face_img.size == 0:
-        return None, None
+    # 1. Preprocessing (wymagany dla EfficientNet)
+    img = cv2.resize(face_img, (224, 224))
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = img.astype(np.float32) / 255.0
 
-    face_img_rgb = cv2.cvtColor(face_img, cv2.COLOR_BGR2RGB)
+    # Normalizacja ImageNet (Standard dla hsemotion)
+    mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
+    std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
+    img = (img - mean) / std
 
-    emotion, scores = emotion_model.predict_emotions(face_img_rgb)
-    return emotion, scores
+    # Zmiana układu z (H, W, C) na (C, H, W) i dodanie wymiaru batcha
+    img = img.transpose(2, 0, 1)
+    img = np.expand_dims(img, axis=0)
+
+    # 2. Predykcja ONNX
+    inputs = {emotion_session.get_inputs()[0].name: img}
+    outputs = emotion_session.run(None, inputs)
+    scores = outputs[0][0]
+
+    emotion_idx = np.argmax(scores)
+    return EMOTION_LABELS[emotion_idx], float(scores[emotion_idx])
 
 def draw_frame_with_emotion(frame,face_rect, confidence, emotion):
     if face_rect is None:
@@ -116,12 +153,14 @@ if __name__ == "__main__":
         face_rect, face_confidence = detect_face(frame)
         if face_rect:
             if current_time - last_time > TIME_THRESHOLD or not last_emotion:
-                emotion, emotion_confidence = classify_emotion(frame, face_rect)
+                # emotion, emotion_confidence = classify_emotion(frame, face_rect)
+                emotion, emotion_confidence = classify_emotion_onnx(frame, face_rect)
                 draw_frame_with_emotion(frame, face_rect, emotion_confidence, emotion)
                 last_emotion = emotion
             else:
                 draw_frame_with_emotion(frame, face_rect, 0.0, "no emotion detected")
-
+        else:
+            cv2.imshow("Face & Emotion Detection", frame)
         last_time = current_time
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
