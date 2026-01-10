@@ -1,0 +1,3 @@
+#!/bin/bash
+
+bluetoothctl connect 78:44:05:95:52:45
