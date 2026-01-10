@@ -1,7 +1,7 @@
 import numpy as np
 import time
 import cv2
-
+import onnxruntime as ort
 import torch
 import functools
 
@@ -14,10 +14,13 @@ caffe_model = 'models/Res10_300x300_ssd_iter_140000.caffemodel'
 prototxt_file = 'models/Resnet_SSD_deploy.prototxt'
 net = cv2.dnn.readNetFromCaffe(prototxt_file, caffeModel=caffe_model)
 
+
 THRESHOLD = 0.5
 last_time = 0
 TIME_THRESHOLD = 1.0  # seconds
+emotion_model_path = 'models/enet_b0_8_best_afew.onnx'
 emotion_model = HSEmotionRecognizer(model_name='enet_b0_8_best_afew')
+# emotion_model =  ort.InferenceSession(emotion_model_path)
 
 
 def detect_face(frame):
@@ -106,12 +109,21 @@ def draw_frame_with_emotion(frame,face_rect, confidence, emotion):
 
 if __name__ == "__main__":
     print("main started")
+    last_emotion = None
     while True:
+        current_time = time.time()
         frame = capture_frame()
         face_rect, face_confidence = detect_face(frame)
         if face_rect:
-            emotion, emotion_confidence = classify_emotion(frame, face_rect)
-            draw_frame_with_emotion(frame, face_rect, emotion_confidence, emotion)
+            if current_time - last_time > TIME_THRESHOLD or not last_emotion:
+                emotion, emotion_confidence = classify_emotion(frame, face_rect)
+                draw_frame_with_emotion(frame, face_rect, emotion_confidence, emotion)
+                last_emotion = emotion
+            else:
+                draw_frame_with_emotion(frame, face_rect, 0.0, "no emotion detected")
+
+        last_time = current_time
+
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
     camera.release()
