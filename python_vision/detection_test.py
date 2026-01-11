@@ -10,10 +10,8 @@ net = cv2.dnn.readNetFromCaffe(prototxt_file, caffeModel=caffe_model)
 
 
 THRESHOLD = 0.5
-last_time = 0
 TIME_THRESHOLD = 1.0  # seconds
 emotion_model_path = '../models/enet_b0_8_best_afew.onnx'
-# emotion_model = HSEmotionRecognizer(model_name='enet_b0_8_best_afew')
 try:
     emotion_session = ort.InferenceSession(emotion_model_path)
     print(f"Model załadowany pomyślnie z: {emotion_model_path}")
@@ -127,7 +125,7 @@ def calculate_face_center(face_rect):
     centerY = (startY + endY) // 2
     return (centerX, centerY)
 
-if __name__ == "__main__":
+def test_pipeline():
     last_emotion = None
     last_confidence = 0.0
     while True:
@@ -150,4 +148,28 @@ if __name__ == "__main__":
             break
     camera.release()
     cv2.destroyAllWindows()
+
+def final_pipeline():
+    last_emotion = None
+    last_confidence = 0.0
+    last_time = 0
+
+    while True:
+        current_time = time.time()
+        frame = capture_frame()
+        face_rect, face_confidence = detect_face(frame)
+        if face_rect:
+            if current_time - last_time > TIME_THRESHOLD or not last_emotion:
+                emotion, emotion_confidence = classify_emotion_onnx(frame, face_rect)
+                last_emotion = emotion
+                last_confidence = emotion_confidence
+                last_time = current_time
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+    camera.release()
+    cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+    test_pipeline()
 
