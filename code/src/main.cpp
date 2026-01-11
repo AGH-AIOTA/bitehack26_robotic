@@ -6,7 +6,6 @@
 
 RPIComm rpiComm = RPIComm();
 Face face(0x3D, 0x3C);
-FaceExpression currentFaceExpression = FaceExpression::NORMAL;
 Dropper dropper(140, 10);
 CameraMount mount;
 
@@ -17,7 +16,7 @@ void rpiCallback(Packet packet) {
   Serial.println(String(packet.messageType) + " | " + String(packet.data.servo.x));
   switch(packet.messageType) {
     case DISPLAY_FACES:
-      currentFaceExpression = (FaceExpression)packet.data.face;
+      face.setExpression((FaceExpression)packet.data.face);
       break;
     case DROP:
       dropper.drop();
@@ -40,7 +39,7 @@ void setup() {
 }
 
 void loop() {
-  face.showFace(currentFaceExpression);
   rpiComm.handle();
-  delay(10);
+  face.update();
+  dropper.update();
 }

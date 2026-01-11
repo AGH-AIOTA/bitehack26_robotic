@@ -1,7 +1,7 @@
 #include "Dropper.h"
 #include <Arduino.h>
 
-Dropper::Dropper(int start, int stop) : startPos(start), stopPos(stop) {}
+Dropper::Dropper(int start, int stop) : startPos(start), stopPos(stop), _currentPos(start) {}
 
 void Dropper::begin(int pin) {
     servo.attach(pin, 500, 2400);
@@ -9,14 +9,46 @@ void Dropper::begin(int pin) {
 }
 
 void Dropper::drop() {
-    for (int pos = startPos; pos >= stopPos; --pos) {
-        servo.write(pos);
-        if (pos == stopPos) delay(3000);
-        else delay(15);
-    }
-    this->reset();
+    if (_dropping) return;  // Already dropping
+    _dropping = true;
+    _waiting = false;
+    _currentPos = startPos;
+    _lastMoveTime = millis();
 }
 
 void Dropper::reset() {
     servo.write(startPos);
+    _currentPos = startPos;
+    _dropping = false;
+    _waiting = false;
+}
+
+void Dropper::update() {
+    if (!_dropping) return;
+    
+    unsigned long now = millis();
+    
+    if (_waiting) {
+        // Waiting at bottom position
+        if (now - _waitStartTime >= 3000) {
+            _waiting = false;
+            reset();
+        }
+        return;
+    }
+    
+    // Moving down
+    const int MOVE_INTERVAL = 15;  // ms between steps
+    if (now - _lastMoveTime >= MOVE_INTERVAL) {
+        _lastMoveTime = now;
+        
+        if (_currentPos > stopPos) {
+            _currentPos--;
+            servo.write(_currentPos);
+        } else {
+            // Reached bottom, start waiting
+            _waiting = true;
+            _waitStartTime = now;
+        }
+    }
 }
