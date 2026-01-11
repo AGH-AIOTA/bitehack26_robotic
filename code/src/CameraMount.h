@@ -10,8 +10,8 @@ class CameraMount {
     int panPos, tiltPos;
     const int stepSize = 2;
     const int deadzone = 15;
-    const int centerX = 640; // 1280/2
-    const int centerY = 360; // 720/2
+    const int centerX = 2464/2; // 2464/2
+    const int centerY = 3280/2; // 3280/2
 
   public:
     CameraMount();
