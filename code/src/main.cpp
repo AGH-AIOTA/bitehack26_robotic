@@ -29,7 +29,6 @@ void rpiCallback(Packet packet) {
 }
 
 void setup() {
-  Serial.begin(115200); 
   Wire.begin(21, 22);
   face.begin();
   mount.begin(panPin, tiltPin);

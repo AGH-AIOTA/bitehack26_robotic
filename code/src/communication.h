@@ -40,7 +40,7 @@ private:
 
 public:
     void begin() {
-        Serial.begin(115200);
+        Serial.begin(921600);
     }
 
     void sendLogs(bool doSend) {
