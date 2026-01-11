@@ -9,7 +9,7 @@ class ESP32Communicator:
     
     HEADER = b'\xAA\xBB'
 
-    def __init__(self, port: str, baudrate: int = 115200):
+    def __init__(self, port: str, baudrate: int = 921600):
         """
         Inicjalizuje połączenie Serial.
         """
@@ -84,6 +84,7 @@ class ESP32Communicator:
         # <hh = Little Endian, short, short (2+2 bajty)
         data = struct.pack('<hh', x, y)
         self._send_packet(self.CMD_SERVO, data)
+        print("sendCords")
 
     def readLogs(self):
         """Opcjonalnie: odczytuje i wypisuje to, co ESP wysyła zwrotnie (printy)."""

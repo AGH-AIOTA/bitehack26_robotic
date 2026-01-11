@@ -18,17 +18,17 @@ except ImportError:
 
 # --- KONFIGURACJA ---
 EMOTION_LABELS = ['Anger', 'Contempt', 'Disgust', 'Fear', 'Happiness', 'Neutral', 'Sadness', 'Surprise']
-THRESHOLD = 0.3
+THRESHOLD = 0.35
 TIME_THRESHOLD = 0.1
 
 # --- FUNKCJE POMOCNICZE (LOGIKA DETEKCJI) ---
 
-def calculate_face_center(face_rect):
-    if face_rect is None: return None
-    startX, startY, endX, endY = face_rect
-    centerX = (startX + endX) // 2
-    centerY = (startY + endY) // 2
-    return centerX, centerY
+def calculate_face_center(rect):
+    if rect is None: return None
+    x1, y1, x2, y2 = rect
+    cx = (x1 + x2) // 2
+    cy = (y1 + y2) // 2
+    return cx, cy
 
 def detect_face(net, frame):
     (h, w) = frame.shape[:2]
@@ -124,7 +124,7 @@ def initialize_vision():
     
     # Konfiguracja - prosty preview w formacie BGR (dla OpenCV)
     config = picam2.create_preview_configuration(
-        main={"size": (1280, 720), "format": "RGB888"},
+        main={"size": (3280, 2464), "format": "RGB888"},
         transform=Transform(hflip=1, vflip=1)  # Odwróć jeśli kamera do góry nogami
     )
     
@@ -158,6 +158,9 @@ def capture_frame(picam2):
         frame = picam2.capture_array()
         if frame is None or frame.size == 0:
             return None
+        frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        # cv2.imwrite("zdjecie.jpg", frame)
+        
         # Konwersja z RGB (Picamera2) do BGR (OpenCV)
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         return frame
@@ -170,18 +173,40 @@ import sys
 sys.path.append("/home/bajer/bitehack")
 
 from comm.esp_comm import ESP32Communicator
-from tts.tts import VoiceSynthesizer
+#from tts.tts import VoiceSynthesizer
+from tts.asyncTTS import AsyncVoiceSynthesizer
 
 from time import sleep
 from enum import Enum
 class Face(Enum):
-    NORMAL = 1
-    BLINK = 2
-    SHY = 3
-    SAD = 4 
-    HAPPY = 5
+    NORMAL = 0
+    BLINK = 1
+    SHY = 2
+    SAD = 3 
+    HAPPY = 4
+    UWU = 5
     SAY = 6
-    UWU = 7
+
+
+def delay(seconds, camera, espComm, face_net):
+    start_time = time.time()
+    while time.time() - start_time < seconds:
+        frame = capture_frame(camera)
+        if frame is None:
+            time.sleep(0.01)  # Krótka pauza jeśli problem z klatką
+            continue
+
+        # Detekcja Twarzy
+        face_rect, face_confidence = detect_face(face_net, frame)
+        if face_rect:
+            # Zapis środka twarzy do Shared Memory
+            cx, cy = calculate_face_center(face_rect)
+
+            espComm.sendCoords(cx, cy)
+            print(f"face_rect: {face_rect}")
+            print(f"face_confidence: {face_confidence}")
+            print(f'cx: {cx}, cy: {cy}')
+
 
 def run_vision_pipeline(shared_face_x, shared_face_y, shared_emotion_idx):
     # Inicjalizacja wewnątrz procesu
@@ -190,7 +215,11 @@ def run_vision_pipeline(shared_face_x, shared_face_y, shared_emotion_idx):
     last_emotion_idx = None
     last_time = 0
 
-    voiceSynthesizer = VoiceSynthesizer()
+    sad_message_id = 0
+    happy_message_id = 0
+    suprise_message_id = 0
+
+    voiceSynthesizer = AsyncVoiceSynthesizer()
     espComm = ESP32Communicator("/dev/ttyUSB0")
     last_state = "Happiness"
 
@@ -212,9 +241,11 @@ def run_vision_pipeline(shared_face_x, shared_face_y, shared_emotion_idx):
                 cx, cy = calculate_face_center(face_rect)
                 shared_face_x.value = cx
                 shared_face_y.value = cy
-                
-                #print(f"face_confidence: {face_confidence}")
-                #print(f'cx: {cx}, cy: {cy}')
+
+                espComm.sendCoords(cx, cy)
+                print(f"face_rect: {face_rect}")
+                print(f"face_confidence: {face_confidence}")
+                print(f'cx: {cx}, cy: {cy}')
                 
                 # Detekcja Emocji (tylko co jakiś czas, bo jest wolna)
                 if current_time - last_time > TIME_THRESHOLD or last_emotion_idx is None:
@@ -225,30 +256,57 @@ def run_vision_pipeline(shared_face_x, shared_face_y, shared_emotion_idx):
                         last_emotion_idx = idx
                         last_time = current_time
                         
-                        if last_state == EMOTION_LABELS[idx]:
+                        if last_state == EMOTION_LABELS[idx] or EMOTION_LABELS[idx] == "Neutral":
                             continue
                         last_state = EMOTION_LABELS[idx]
 
                         # Debug
                         print(f"Widzę: {EMOTION_LABELS[idx]} ({conf:.2f})")
 
-                #EMOTION_LABELS = ['Anger', 'Contempt', 'Disgust', 'Fear', 'Happiness', 'Neutral', 'Sadness', 'Surprise']
-                        if EMOTION_LABELS[idx] in ["Anger", 'Sadness']:
-                            espComm.sendFace(Face.SAD.value)
-                            sleep(1.5)
-                            espComm.sendFace(Face.SAY.value)
-                            espComm.sendGift(0)
-                            voiceSynthesizer.say("Ale fajny żart")
-                        elif EMOTION_LABELS[idx] in ['Fear', 'Surprise']:
-                            espComm.sendFace(Face.SHY.value)
-                            sleep(1)
-                        elif EMOTION_LABELS[idx] == "Happiness":
-                            espComm.sendFace(Face.UWU.value)
-                            sleep(2)
-                        else:
-                            pass
+                        HAPPY = ["O, widzę że dzień ci dobrze mija!", 
+                        "Co cię tak rozbawiło?", 
+                        "Też mam dobry humor jak cię widzę.",
+                        "Twoja energia jest zaraźliwa, aż mi się humor poprawił!",
+                        "Uwielbiam widzieć cię w takim nastroju. Co dobrego się wydarzyło?",
+                        "Promiejesz! Oby tak dalej przez cały dzień.",
+                        "Cieszę się twoim szczęściem! Przybij piątkę!"]
+                        SAD = ["Skąd ta smutna mina? Masz cukierka!", 
+                        "Widzę że masz zły humor, opowiedzieć ci żart?",
+                        "Przykro mi, że tak się czujesz. Pamiętaj, że po burzy zawsze wychodzi słońce.",
+                        "Chcesz o tym pogadać, czy wolisz chwilę spokoju?",
+                        "Głowa do góry! Jesteś silniejszy niż myślisz. Masz cukierka!",
+                        "Gdyby uścisk mógł pomóc, to właśnie go wysyłam! Masz cukierka!"]
+                        SUPRISE = ["Ojej! Co cię tak mocno zaskoczyło?",
+                        "Wyglądasz, jakbyś zobaczył ducha! ",
+                        "Też nie mogę w to uwierzyć!",
+                         "Zamurowało cię? Ja też nie spodziewałem się takiego obrotu spraw!",
+                        "Twoja mina mówi wszystko – to był totalny szok!",
+                        "Niezły zwrot akcji, prawda? Czyste szaleństwo!",
+                        "Wow! Tego nie było w scenariuszu!"]
 
-                        sleep(0.5)
+                #EMOTION_LABELS = ['Anger', 'Contempt', 'Disgust', 'Fear', 'Happiness', 'Neutral', 'Sadness', 'Surprise']
+                        emotion = EMOTION_LABELS[idx]
+                        if emotion == "Anger" or emotion ==  'Sadness':
+                            espComm.sendFace(Face.SAD.value)
+                            delay(0.5, camera, espComm, face_net)
+                            voiceSynthesizer.say(SAD[sad_message_id])
+                            espComm.sendFace(Face.SAY.value)
+                            delay(2.5, camera, espComm, face_net)
+                            if sad_message_id == 0 or sad_message_id == 4 or sad_message_id == 5:
+                                espComm.sendGift(0)
+                            sad_message_id = (sad_message_id + 1) % len(SAD)
+                        elif emotion == 'Fear' or emotion == 'Surprise':
+                            espComm.sendFace(Face.SHY.value)
+                            voiceSynthesizer.say(SUPRISE[suprise_message_id])
+                            suprise_message_id = (suprise_message_id + 1) % len(SUPRISE)
+                            delay(1, camera, espComm, face_net)
+                        elif emotion == "Happiness":
+                            espComm.sendFace(Face.UWU.value)
+                            voiceSynthesizer.say(HAPPY[happy_message_id])
+                            delay(2, camera, espComm, face_net)
+                            happy_message_id = (happy_message_id + 1) % len(HAPPY)
+
+                        delay(2.5, camera, espComm, face_net)
                         espComm.sendFace(Face.BLINK.value)
 
             else:
@@ -277,14 +335,14 @@ if __name__ == "__main__":
 
     print("Główny proces działa. Naciśnij Ctrl+C aby wyjść.")
     
-    try:
-        while True:
-            # Możesz tu dodać odczyt współdzielonych zmiennych
-            if face_x.value != -1:
-                pass#print(f"Twarz w: ({face_x.value}, {face_y.value}), Emocja: {EMOTION_LABELS[emotion_id.value] if emotion_id.value != -1 else 'Brak'}")
-            time.sleep(0.5)
-    except KeyboardInterrupt:
-        print("\nZatrzymywanie procesu wizji...")
-        p.terminate()
-        p.join()
-        print("Zakończono.")
+    # try:
+    #     while True:
+    #         # Możesz tu dodać odczyt współdzielonych zmiennych
+    #         if face_x.value != -1:
+    #             pass#print(f"Twarz w: ({face_x.value}, {face_y.value}), Emocja: {EMOTION_LABELS[emotion_id.value] if emotion_id.value != -1 else 'Brak'}")
+    #         time.sleep(0.5)
+    # except KeyboardInterrupt:
+    #     print("\nZatrzymywanie procesu wizji...")
+    #     p.terminate()
+    #     p.join()
+    #     print("Zakończono.")
