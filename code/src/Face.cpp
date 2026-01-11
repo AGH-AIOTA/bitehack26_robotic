@@ -39,15 +39,23 @@ void Face::showUwu() {
     _mouth.drawUwu();
 }
 
-void Face::say(int durationMs) {
-    unsigned long startTime = millis();
-    _eyes.drawNormal(); // Oczy patrzą normalnie podczas mówienia
+void Face::say() {
+    _eyes.drawNormal();
+    _mouth.drawTalk(1); delay(80);
+    _mouth.drawTalk(2); delay(100);
+    _mouth.drawTalk(1); delay(80);
+    _mouth.drawTalk(0); delay(100);
+    _mouth.drawNormal();
+}
 
-    while (millis() - startTime < durationMs) {
-        _mouth.drawTalk(1); delay(80);
-        _mouth.drawTalk(2); delay(100);
-        _mouth.drawTalk(1); delay(80);
-        _mouth.drawTalk(0); delay(100);
+void Face::showFace(FaceExpression faceExpression) {
+    switch(faceExpression) {
+        case NORMAL: showNormal(); break;
+        case BLINK: showBlink(); break;
+        case SHY: showShy(); break;
+        case SAD: showSad(); break;
+        case HAPPY: showHappy(); break;
+        case UWU: showUwu(); break;
+        case SAY: say(); break;
     }
-    _mouth.drawNormal(); // Zamknij usta po zakończeniu
 }

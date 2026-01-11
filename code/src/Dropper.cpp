@@ -11,9 +11,10 @@ void Dropper::begin(int pin) {
 void Dropper::drop() {
     for (int pos = startPos; pos >= stopPos; --pos) {
         servo.write(pos);
-        if (pos == stopPos) delay(1000);
+        if (pos == stopPos) delay(3000);
         else delay(15);
     }
+    this->reset();
 }
 
 void Dropper::reset() {

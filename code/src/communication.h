@@ -1,9 +1,9 @@
 #include <Arduino.h>
 
 enum Type {
-    DISPLAY_EYES = 48,  // ascii '0'
-    DISPLAY_MOUTH = 49, // ascii '1'
-    SERVO = 50          // ascii '2'
+    DISPLAY_FACES = 48,  // ascii '0'
+    DROP = 49,          // ascii '1'
+    CAMERA_MOUNT = 50   // ascii '2'
 };
 
 struct Packet
@@ -13,8 +13,7 @@ struct Packet
     union Data {
         int32_t rawValue;
 
-        int32_t eyes;
-        int32_t mouth;
+        int32_t face;
         struct {
             int16_t x;
             int16_t y;

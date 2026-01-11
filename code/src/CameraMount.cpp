@@ -18,7 +18,7 @@ void CameraMount::center() {
     servoTilt.write(tiltPos);
 }
 
-void CameraMount::updateTracking(int x, int y) {
+void CameraMount::updateTracking(int16_t x, int16_t y) {
     if (x < (centerX - deadzone)) panPos += stepSize;
     else if (x > (centerX + deadzone)) panPos -= stepSize;
 

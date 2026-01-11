@@ -10,13 +10,13 @@ class CameraMount {
     int panPos, tiltPos;
     const int stepSize = 2;
     const int deadzone = 15;
-    const int centerX = 160; // 320/2
-    const int centerY = 120; // 240/2
+    const int centerX = 320; // 640/2
+    const int centerY = 240; // 480/2
 
   public:
     CameraMount();
     void begin(int panPin, int tiltPin);
-    void updateTracking(int x, int y);
+    void updateTracking(int16_t x, int16_t y);
     void center();
 };
 
