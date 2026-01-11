@@ -38,17 +38,7 @@ void Dropper::update() {
     }
     
     // Moving down
-    const int MOVE_INTERVAL = 15;  // ms between steps
-    if (now - _lastMoveTime >= MOVE_INTERVAL) {
-        _lastMoveTime = now;
-        
-        if (_currentPos > stopPos) {
-            _currentPos--;
-            servo.write(_currentPos);
-        } else {
-            // Reached bottom, start waiting
-            _waiting = true;
-            _waitStartTime = now;
-        }
-    }
+    servo.write(stopPos);
+    _waiting = true;
+    _waitStartTime = now;
 }
